@@ -73,34 +73,6 @@
 #define __MMU_ASSERT(test, fmt, ...)
 #endif
 
-/* We support only 4kB translation granule */
-
-#define PAGE_SIZE_SHIFT                 12U
-#define PAGE_SIZE                       (1U << PAGE_SIZE_SHIFT)
-#define XLAT_TABLE_SIZE_SHIFT           PAGE_SIZE_SHIFT /* Size of one
-                                                         * complete table */
-#define XLAT_TABLE_SIZE                 (1U << XLAT_TABLE_SIZE_SHIFT)
-
-#define XLAT_TABLE_ENTRY_SIZE_SHIFT     3U /* Each table entry is 8 bytes */
-#define XLAT_TABLE_LEVEL_MAX            3U
-
-#define XLAT_TABLE_ENTRIES_SHIFT \
-  (XLAT_TABLE_SIZE_SHIFT - XLAT_TABLE_ENTRY_SIZE_SHIFT)
-#define XLAT_TABLE_ENTRIES              (1U << XLAT_TABLE_ENTRIES_SHIFT)
-
-/* Address size covered by each entry at given translation table level */
-
-#define L3_XLAT_VA_SIZE_SHIFT           PAGE_SIZE_SHIFT
-#define L2_XLAT_VA_SIZE_SHIFT \
-  (L3_XLAT_VA_SIZE_SHIFT + XLAT_TABLE_ENTRIES_SHIFT)
-#define L1_XLAT_VA_SIZE_SHIFT \
-  (L2_XLAT_VA_SIZE_SHIFT + XLAT_TABLE_ENTRIES_SHIFT)
-#define L0_XLAT_VA_SIZE_SHIFT \
-  (L1_XLAT_VA_SIZE_SHIFT + XLAT_TABLE_ENTRIES_SHIFT)
-
-#define LEVEL_TO_VA_SIZE_SHIFT(level)            \
-  (PAGE_SIZE_SHIFT + (XLAT_TABLE_ENTRIES_SHIFT * \
-                      (XLAT_TABLE_LEVEL_MAX - (level))))
 
 /* Virtual Address Index within given translation table level */
 
@@ -184,7 +156,7 @@ static const struct arm_mmu_region g_mmu_nxrt_regions[] =
                         MT_NORMAL | MT_RW | MT_SECURE),
 };
 
-static const struct arm_mmu_config g_mmu_nxrt_config =
+ const struct arm_mmu_config g_mmu_nxrt_config =
 {
   .num_regions = nitems(g_mmu_nxrt_regions),
   .mmu_regions = g_mmu_nxrt_regions,
@@ -482,6 +454,17 @@ static void init_xlat_tables(const struct arm_mmu_region *region)
     }
 }
 
+static void init_xlat_l1tables(void)
+{
+
+  uint64_t *new_table;
+
+  new_table = new_prealloc_table();
+  base_xlat_table[CONFIG_ARCH_TEXT_VBASE >> L1_XLAT_VA_SIZE_SHIFT] = (uint64_t)new_table | PTE_TABLE_DESC;
+
+
+}
+
 static void setup_page_tables(void)
 {
   uint64_t max_va = 0, max_pa = 0;
@@ -513,14 +496,15 @@ static void setup_page_tables(void)
 
   /* setup translation table for mirtos execution regions */
 
-  for (index = 0; index < g_mmu_nxrt_config.num_regions; index++)
-    {
-      region = &g_mmu_nxrt_config.mmu_regions[index];
-      if (region->size || region->attrs)
-        {
-          init_xlat_tables(region);
-        }
-    }
+//  for (index = 0; index < g_mmu_nxrt_config.num_regions; index++)
+//    {
+//      region = &g_mmu_nxrt_config.mmu_regions[index];
+//      if (region->size || region->attrs)
+//        {
+//          init_xlat_tables(region);
+//        }
+//    }
+  init_xlat_l1tables();
 }
 
 static void enable_mmu_el1(unsigned int flags)
@@ -621,4 +605,23 @@ int arm64_mmu_init(bool is_primary_core)
   enable_mmu_el1(flags);
 
   return 0;
+}
+
+void mmu_l1_setentry(uintptr_t paddr, uintptr_t vaddr, uintptr_t mmuflags)
+{
+  uint64_t *l1table = (uint64_t *)(base_xlat_table[vaddr >> L1_XLAT_VA_SIZE_SHIFT] & (~0xfffULL));
+  uint64_t  index    = (vaddr & ((1 << L1_XLAT_VA_SIZE_SHIFT) - 1)) >> L2_XLAT_VA_SIZE_SHIFT;
+
+  /* Save the page table entry */
+  l1table[index] = (uint64_t)(paddr | mmuflags);
+
+  /* Flush the data cache entry.  Make sure that the modified contents
+   * of the page table are flushed into physical memory.
+   */
+
+  //cp15_clean_dcache_bymva((uint32_t)&l1table[index]);
+
+  /* Invalidate the TLB cache associated with virtual address range */
+
+  //mmu_invalidate_region(vaddr, SECTION_SIZE);
 }

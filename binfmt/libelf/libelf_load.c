@@ -226,7 +226,7 @@ static inline int elf_loadfile(FAR struct elf_loadinfo_s *loadinfo)
 
               /* Read the section data from sh_offset to specified region */
 
-              ret = elf_read(loadinfo, (FAR uint8_t *)addr,
+              ret = elf_read(loadinfo, (FAR uint8_t *)(uintptr_t)addr,
                              shdr->sh_size, shdr->sh_offset);
               if (ret < 0)
                 {
@@ -242,7 +242,7 @@ static inline int elf_loadfile(FAR struct elf_loadinfo_s *loadinfo)
 
           else
             {
-              memset((FAR uint8_t *)shdr->sh_addr, 0, shdr->sh_size);
+              memset((FAR uint8_t *)(uintptr_t)shdr->sh_addr, 0, shdr->sh_size);
             }
 #endif
 

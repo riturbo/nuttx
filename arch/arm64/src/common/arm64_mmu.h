@@ -33,6 +33,73 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* We support only 4kB translation granule */
+
+#define PAGE_SIZE_SHIFT                 12U
+#define PAGE_SIZE                       (1U << PAGE_SIZE_SHIFT)
+#define XLAT_TABLE_SIZE_SHIFT           PAGE_SIZE_SHIFT /* Size of one
+                                                         * complete table */
+#define XLAT_TABLE_SIZE                 (1U << XLAT_TABLE_SIZE_SHIFT)
+
+#define XLAT_TABLE_ENTRY_SIZE_SHIFT     3U /* Each table entry is 8 bytes */
+#define XLAT_TABLE_LEVEL_MAX            3U
+
+#define XLAT_TABLE_ENTRIES_SHIFT \
+  (XLAT_TABLE_SIZE_SHIFT - XLAT_TABLE_ENTRY_SIZE_SHIFT)
+#define XLAT_TABLE_ENTRIES              (1U << XLAT_TABLE_ENTRIES_SHIFT)
+
+/* Address size covered by each entry at given translation table level */
+
+#define L3_XLAT_VA_SIZE_SHIFT           PAGE_SIZE_SHIFT
+#define L2_XLAT_VA_SIZE_SHIFT \
+  (L3_XLAT_VA_SIZE_SHIFT + XLAT_TABLE_ENTRIES_SHIFT)
+#define L1_XLAT_VA_SIZE_SHIFT \
+  (L2_XLAT_VA_SIZE_SHIFT + XLAT_TABLE_ENTRIES_SHIFT)
+#define L0_XLAT_VA_SIZE_SHIFT \
+  (L1_XLAT_VA_SIZE_SHIFT + XLAT_TABLE_ENTRIES_SHIFT)
+
+#define LEVEL_TO_VA_SIZE_SHIFT(level)            \
+  (PAGE_SIZE_SHIFT + (XLAT_TABLE_ENTRIES_SHIFT * \
+                      (XLAT_TABLE_LEVEL_MAX - (level))))
+
+
+
+#define SECTION_SHIFT         (L2_XLAT_VA_SIZE_SHIFT)
+#define SECTION_SIZE          (1 << SECTION_SHIFT)
+#define SECTION_MASK          (SECTION_SIZE - 1)
+#define PTE_SMALL_FLAG_MASK  (0x0000003f) /* Bits 0-11: MMU flags (mostly) */
+#define PTE_SMALL_PADDR_MASK (0xfffff000) /* Bits 12-31: Small page base address, PA[31:12] */
+#define PTE_TYPE_SHIFT       (0)          /* Bits: 1:0:  Type of mapping */
+#define PTE_TYPE_MASK        (3 << PTE_TYPE_SHIFT)
+#define PTE_TYPE_FAULT       (0 << PTE_TYPE_SHIFT) /* None */
+#define PTE_TYPE_LARGE       (1 << PTE_TYPE_SHIFT) /* 64Kb of memory */
+#define PTE_TYPE_SMALL       (2 << PTE_TYPE_SHIFT) /*  4Kb of memory */
+#define PTE_B                (1 << 2)              /* Bit 2:  Bufferable bit */
+#define PTE_C                (1 << 3)              /* Bit 3:  Cacheable bit */
+
+#define PTE_S                (1 << 3)              /* Bit 3:  Cacheable bit */
+
+#define PTE_WRITE_BACK       (PTE_B | PTE_C)
+#ifdef CONFIG_AFE_ENABLE
+#  define MMU_L2_UTEXTFLAGS   (PTE_TYPE_SMALL | PTE_WRITE_BACK )
+#else
+#  define MMU_L2_UTEXTFLAGS   (PTE_TYPE_SMALL | PTE_WRITE_BACK)
+#endif
+#ifndef CONFIG_SMP
+#  define MMU_L2_UDATAFLAGS   (PTE_TYPE_SMALL | PTE_WRITE_BACK)
+#  define MMU_L2_KDATAFLAGS   (PTE_TYPE_SMALL | PTE_WRITE_BACK)
+#  define MMU_L2_UALLOCFLAGS  (PTE_TYPE_SMALL | PTE_WRITE_BACK)
+#  define MMU_L2_KALLOCFLAGS  (PTE_TYPE_SMALL | PTE_WRITE_BACK)
+#else
+#  define MMU_L2_UDATAFLAGS   (PTE_TYPE_SMALL | PTE_WRITE_BACK | PTE_S)
+#  define MMU_L2_KDATAFLAGS   (PTE_TYPE_SMALL | PTE_WRITE_BACK | PTE_S | PTE_AP_RW1)
+#  define MMU_L2_UALLOCFLAGS  (PTE_TYPE_SMALL | PTE_WRITE_BACK | PTE_S )
+#  define MMU_L2_KALLOCFLAGS  (PTE_TYPE_SMALL | PTE_WRITE_BACK | PTE_S | PTE_AP_RW1)
+#endif
+#define PMD_PTE_PADDR_MASK   (0xfffffc00) /* Bits 10-31: Page table base address */
+#define PMD_PTE_PADDR_MASK   (0xfffffc00) /* Bits 10-31: Page table base address */
+#define PMD_PTE_PADDR_MASK   (0xfffffc00) /* Bits 10-31: Page table base address */
+#define MMU_L1_PGTABFLAGS     (0x3 )
 /* Following Memory types supported through MAIR encodings can be passed
  * by user through "attrs"(attributes) field of specified memory region.
  * As MAIR supports such 8 encodings, we will reserve attrs[2:0];
@@ -247,6 +314,8 @@ extern const struct arm_mmu_config g_mmu_config;
  ****************************************************************************/
 
 int arm64_mmu_init(bool is_primary_core);
+
+void mmu_l1_setentry(uintptr_t paddr, uintptr_t vaddr, uintptr_t mmuflags);
 
 #endif /* __ASSEMBLY__ */
 

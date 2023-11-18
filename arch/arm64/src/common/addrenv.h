@@ -44,6 +44,11 @@
 #  define ARCH_KERNEL_STACKSIZE  STACK_ALIGN_UP(CONFIG_ARCH_KERNEL_STACKSIZE)
 #endif
 
+/* Using a 4KiB page size, each 8MiB section maps (for 32 bit PA, level 0 with 4KiB granule) to a PTE containing
+ * 256*4KiB entries
+ */
+#define ENTRIES_PER_L2TABLE  (CONFIG_MM_PGSIZE / 8)
+
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
@@ -82,7 +87,7 @@ int arm64_addrenv_create_region(uintptr_t **list, size_t listlen,
                                 uint32_t mmuflags);
 
 /****************************************************************************
- * Name: arm_addrenv_destroy_region
+ * Name: arm64_addrenv_destroy_region
  *
  * Description:
  *   Destroy one memory region.

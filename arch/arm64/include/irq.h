@@ -219,6 +219,18 @@ extern "C"
 EXTERN volatile uint64_t *g_current_regs[CONFIG_SMP_NCPUS];
 #define CURRENT_REGS (g_current_regs[up_cpu_index()])
 
+/* This structure represents the return state from a system call */
+
+#ifdef CONFIG_LIB_SYSCALL
+struct xcpt_syscall_s
+{
+#ifdef CONFIG_BUILD_KERNEL
+  uint32_t cpsr;        /* The CPSR value */
+#endif
+  uint64_t sysreturn;   /* The return PC */
+};
+#endif
+
 struct xcptcontext
 {
   /* The following function pointer is non-zero if there are pending signals
@@ -256,6 +268,15 @@ struct xcptcontext
 
 #ifdef CONFIG_PAGING
   uintptr_t far;
+#endif
+
+#ifdef CONFIG_LIB_SYSCALL
+  /* The following array holds the return address and the exc_return value
+   * needed to return from each nested system call.
+   */
+
+  uint8_t nsyscalls;
+  struct xcpt_syscall_s syscall[CONFIG_SYS_NNEST];
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV

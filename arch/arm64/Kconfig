@@ -280,6 +280,23 @@ config ARM64_SEMIHOSTING_HOSTFS_CACHE_COHERENCE
 
 endif # ARM64_SEMIHOSTING_HOSTFS
 
+
+config ARM64_PA_BITS
+	int "Physical address space size "
+	default 36
+	---help---
+		Choose the maximum physical address range that the kernel will support.
+		The choice could be: 32, 36, 42, 48 	d epends on BUILD_KERNEL
+
+config ARM64_VA_BITS
+	int "Virtual address space size "
+	default 36
+	---help---
+		Allows choosing one of multiple possible virtual address
+		space sizes. The level of translation table is determined by
+		a combination of page size and virtual address space size.
+		The choice could be: 32, 36, 42, 48
+
 config ARM64_DCACHE_DISABLE
 	bool "Disable DCACHE at __start"
 	default n

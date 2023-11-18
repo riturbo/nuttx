@@ -1,6 +1,11 @@
 README.txt
 ==========
 
+qemu-system-aarch64 -cpu cortex-a53 -smp 4 -nographic \
+      -machine virt,virtualization=on,gic-version=2 \
+      -net none -chardev stdio,id=con,mux=on -serial chardev:con \
+      -mon chardev=con,mode=readline -kernel ./nuttx -s -S
+
 This board configuration will use QEMU to emulate generic ARM64 v8-A series
 hardware platform and provides support for these devices:
 

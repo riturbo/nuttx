@@ -287,7 +287,7 @@ static int elf_loadbinary(FAR struct binary_s *binp,
 
       /* The entrypoint for a fully linked executable can be found directly */
 
-      binp->entrypt = (main_t)(loadinfo.ehdr.e_entry);
+      binp->entrypt = (main_t)(uintptr_t)(loadinfo.ehdr.e_entry);
     }
 
   else

@@ -34,7 +34,6 @@
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
 #  include <nuttx/pgalloc.h>
-#  include <nuttx/addrenv.h>
 #endif
 
 /****************************************************************************
@@ -46,6 +45,25 @@
 #  error Only pages sizes of 4096 are currently supported (CONFIG_ARCH_ADDRENV)
 #endif
 
+/* Convert (suppose 4KiB) pages to 8MiB sections (for 32 bit PA) ,only support level 0 with 4KiB granule*/
+
+#  define __PG2SECT_SHIFT     (CONFIG_ARM64_PA_BITS - 9 - MM_PGSHIFT - 2)
+#  define __PG2SECT_MASK      ((1 << __PG2SECT_SHIFT) - 1)
+
+#  define ARCH_PG2SECT(p)     (((p) + __PG2SECT_MASK) >> __PG2SECT_SHIFT)
+#  define ARCH_SECT2PG(s)     ((s) << __PG2SECT_SHIFT)
+
+#  define ARCH_TEXT_NSECTS    ARCH_PG2SECT(CONFIG_ARCH_TEXT_NPAGES)
+#  define ARCH_DATA_NSECTS    ARCH_PG2SECT(CONFIG_ARCH_DATA_NPAGES)
+#  define ARCH_HEAP_NSECTS    ARCH_PG2SECT(CONFIG_ARCH_HEAP_NPAGES)
+
+#  ifdef CONFIG_ARCH_VMA_MAPPING
+#    define ARCH_SHM_NSECTS   ARCH_PG2SECT(ARCH_SHM_MAXPAGES)
+#  endif
+
+#  ifdef CONFIG_ARCH_STACK_DYNAMIC
+#    define ARCH_STACK_NSECTS ARCH_PG2SECT(CONFIG_ARCH_STACK_NPAGES)
+#  endif
 #endif /* CONFIG_ARCH_ADDRENV */
 
 /****************************************************************************

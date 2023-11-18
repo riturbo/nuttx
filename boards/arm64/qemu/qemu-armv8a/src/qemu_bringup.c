@@ -27,10 +27,12 @@
 #include <sys/types.h>
 #include <syslog.h>
 
+#include <arch/board/boot_romfsimg.h>
+#include <nuttx/irq.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/virtio/virtio-mmio.h>
 #include <nuttx/fdt.h>
-
+#include <nuttx/drivers/ramdisk.h>
 #ifdef CONFIG_LIBC_FDT
 #  include <libfdt.h>
 #endif
@@ -197,6 +199,16 @@ static void register_devices_from_fdt(void)
 int qemu_bringup(void)
 {
   int ret;
+
+  if (up_cpu_index() == 0) {
+    syslog(LOG_ERR,"OKK\n");
+
+    ret = romdisk_register(0, romfs_img, romfs_img_len/512, 512);
+    if (ret < 0)
+    {
+      syslog(LOG_ERR,"ERROR: romdisk_register failed: %d\n", ret);
+    }
+  }
 
 #ifdef CONFIG_FS_PROCFS
   /* Mount the procfs file system */
